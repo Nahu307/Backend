@@ -1,7 +1,13 @@
 const express = require('express');
+const http = require('http');
 const fs = require('fs');
+const path = require('path');
+const socketIo = require('socket.io');
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server);
+
 const port = 8080;
 
 // Middleware para el manejo de JSON
@@ -17,131 +23,34 @@ app.get('/api/products', (req, res) => {
   res.json(productList);
 });
 
-// Ruta para obtener un producto por ID
-app.get('/api/products/:pid', (req, res) => {
-  const productId = req.params.pid;
-  const product = products.find((p) => p.id === productId);
 
-  if (product) {
-    res.json(product);
-  } else {
-    res.status(404).json({ error: 'Producto no encontrado' });
-  }
+
+// Configuración de WebSockets
+io.on('connection', (socket) => {
+  console.log('Cliente conectado');
+  
+  // Enviar lista de productos a través de WebSocket
+  socket.emit('products', products);
 });
 
-// Ruta para agregar un nuevo producto
-app.post('/api/products', (req, res) => {
-  const { title, description, code, price, stock, category, thumbnails } = req.body;
-
-  if (!title || !description || !code || !price || !stock || !category) {
-    return res.status(400).json({ error: 'Todos los campos obligatorios son requeridos' });
-  }
-
-  const newProductId = generateUniqueProductId(); // Implementa esta función según tu lógica
-  const status = true;
-
-  const newProduct = {
-    id: newProductId,
-    title,
-    description,
-    code,
-    price,
-    status,
-    stock,
-    category,
-    thumbnails: thumbnails || [],
-  };
-
-  products.push(newProduct);
-  res.status(201).json(newProduct);
+// Ruta para la vista raíz
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'views', 'index.handlebars');
+  fs.readFile(indexPath, 'utf8', (err, data) => {
+    if (err) {
+      res.status(500).send('Error al leer el archivo de vista.');
+    } else {
+      res.send(data);
+    }
+  });
 });
 
-// Ruta para actualizar un producto por su ID
-app.put('/api/products/:pid', (req, res) => {
-  const productId = req.params.pid;
-  const productIndex = products.findIndex((p) => p.id === productId);
-
-  if (productIndex === -1) {
-    return res.status(404).json({ error: 'Producto no encontrado' });
-  }
-
-  const updatedProduct = { ...products[productIndex], ...req.body };
-  products[productIndex] = updatedProduct;
-  res.json(updatedProduct);
+// Ruta para "/realtimeproducts" - No es necesario, pero puedes usarla si lo deseas
+app.get('/realtimeproducts', (req, res) => {
+  res.send('Ruta /realtimeproducts');
 });
 
-// Ruta para eliminar un producto por su ID
-app.delete('/api/products/:pid', (req, res) => {
-  const productId = req.params.pid;
-  const productIndex = products.findIndex((p) => p.id === productId);
-
-  if (productIndex === -1) {
-    return res.status(404).json({ error: 'Producto no encontrado' });
-  }
-
-  products.splice(productIndex, 1);
-  res.json({ message: 'Producto eliminado' });
-});
-
-// Rutas para carritos
-const carts = [];
-
-// Ruta para crear un nuevo carrito
-app.post('/api/carts', (req, res) => {
-  const newCartId = generateUniqueCartId(); // Implementa esta función según tu lógica
-  const newCart = {
-    id: newCartId,
-    products: [],
-  };
-  carts.push(newCart);
-  res.status(201).json(newCart);
-});
-
-// Ruta para listar los productos de un carrito por su ID
-app.get('/api/carts/:cid', (req, res) => {
-  const cartId = req.params.cid;
-  const cart = carts.find((c) => c.id === cartId);
-
-  if (!cart) {
-    return res.status(404).json({ error: 'Carrito no encontrado' });
-  }
-
-  res.json(cart.products);
-});
-
-// Ruta para agregar un producto a un carrito
-app.post('/api/carts/:cid/product/:pid', (req, res) => {
-  const cartId = req.params.cid;
-  const productId = req.params.pid;
-  const cart = carts.find((c) => c.id === cartId);
-
-  if (!cart) {
-    return res.status(404).json({ error: 'Carrito no encontrado' });
-  }
-
-  const product = cart.products.find((p) => p.product === productId);
-
-  if (product) {
-    // Si el producto ya existe en el carrito, incrementa la cantidad
-    product.quantity++;
-  } else {
-    // Agrega el producto al carrito con cantidad 1
-    cart.products.push({ product: productId, quantity: 1 });
-  }
-
-  res.json(cart.products);
-});
-
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Servidor Express en ejecución en el puerto ${port}`);
 });
 
-// Función para generar un ID único para productos
-function generateUniqueProductId() {
-  // Implementa la generación de ID único según tus necesidades.
-}
-
-// Función para generar un ID único para carritos
-function generateUniqueCartId() {
-  // Implementa la generación de ID único según tus necesidades.
-}
