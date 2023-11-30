@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+</head>
+<body>
+    <h1>Chat</h1>
+    
+    
+    <div id="chatMessages"></div>
+
+    <form id="messageForm">
+        <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." />
+        <button type="submit">Enviar</button>
+    </form>
+
+    <script>
+        // Lógica básica para manejar el envío de mensajes
+        document.getElementById('messageForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (message !== '') {
+                const chatMessages = document.getElementById('chatMessages');
+                const newMessage = document.createElement('div');
+                newMessage.textContent = message;
+                chatMessages.appendChild(newMessage);
+
+               
+                messageInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
