@@ -8,16 +8,22 @@
 <body>
     <h1>Chat</h1>
     
-    
-    <div id="chatMessages"></div>
+    <div id="chatMessages">
+        {{#each messages}}
+            <div>{{this}}</div>
+        {{/each}}
+    </div>
 
     <form id="messageForm">
         <input type="text" id="messageInput" placeholder="Escribe tu mensaje..." />
         <button type="submit">Enviar</button>
     </form>
 
+    <script id="message-template" type="text/x-handlebars-template">
+        <div>{{message}}</div>
+    </script>
+
     <script>
-        // Lógica básica para manejar el envío de mensajes
         document.getElementById('messageForm').addEventListener('submit', function(event) {
             event.preventDefault();
             const messageInput = document.getElementById('messageInput');
@@ -25,14 +31,15 @@
 
             if (message !== '') {
                 const chatMessages = document.getElementById('chatMessages');
-                const newMessage = document.createElement('div');
-                newMessage.textContent = message;
-                chatMessages.appendChild(newMessage);
+                const messageTemplate = document.getElementById('message-template').innerHTML;
+                const compiledTemplate = Handlebars.compile(messageTemplate);
+                const newMessageHTML = compiledTemplate({ message });
+                chatMessages.insertAdjacentHTML('beforeend', newMessageHTML);
 
-               
                 messageInput.value = '';
             }
         });
     </script>
 </body>
 </html>
+

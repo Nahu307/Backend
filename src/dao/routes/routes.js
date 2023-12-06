@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const MessageService = require('../services/messageService');
+const productController = require('../controllers/productController');
 
 
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
