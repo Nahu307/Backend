@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
     unique: true,
     validate: {
       validator: function (v) {
-        // Simple regex para validar el formato de correo electrónico
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
       },
       message: props => `${props.value} no es un formato de correo electrónico válido`
@@ -25,24 +24,30 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-// Antes de guardar, hashea la contraseña
+// Middleware para hashear la contraseña antes de guardarla
 userSchema.pre('save', async function (next) {
-  const user = this;
-  if (!user.isModified('password')) return next();
+  try {
+    const user = this;
+    if (!user.isModified('password')) return next();
 
-  const salt = await bcrypt.genSalt(10);
-  const hash = await bcrypt.hash(user.password, salt);
-  user.password = hash;
-  next();
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(user.password, salt);
+    user.password = hash;
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Método para comparar contraseñas
 userSchema.methods.comparePassword = async function (candidatePassword) {
-  return bcrypt.compare(candidatePassword, this.password);
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw error;
+  }
 };
 
 const UserModel = mongoose.model('User', userSchema);
 
 module.exports = UserModel;
-
-

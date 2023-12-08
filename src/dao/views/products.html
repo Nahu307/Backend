@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Productos</title>
+</head>
+<body>
+    <h1>Lista de Productos</h1>
+    <ul id="product-list">
+        <!-- Los productos se cargarán dinámicamente aquí -->
+    </ul>
+    <!-- Otros elementos de la interfaz relacionados con los productos -->
+    <button onclick="loadProducts()">Cargar Productos</button>
+    <a href="/logout">Cerrar sesión</a>
+
+    <script>
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products'); // Endpoint para obtener los productos
+                if (!response.ok) {
+                    throw new Error('Error al obtener productos');
+                }
+                const products = await response.json();
+
+                const productList = document.getElementById('product-list');
+                productList.innerHTML = ''; // Limpiar la lista de productos antes de agregar nuevos
+
+                products.forEach(product => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = product.name;
+                    productList.appendChild(listItem);
+                });
+            } catch (error) {
+                console.error('Error al obtener productos:', error);
+                alert('No se pudieron cargar los productos. Inténtalo de nuevo más tarde.');
+            }
+        }
+    </script>
+</body>
+</html>
+
+
+

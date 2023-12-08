@@ -9,6 +9,7 @@ const cartRouter = require('./routes/cart');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
+const authRoutes = require('./routes/authRoutes');
 
 const port = 8080;
 
@@ -22,6 +23,9 @@ db.on('error', console.error.bind(console, 'Error de conexión a MongoDB:'));
 db.once('open', () => {
   console.log('Conexión exitosa a MongoDB local');
 });
+
+// Agregar las rutas de autenticación
+app.use('/auth', authRoutes);
 
 // Configuración de Handlebars
 app.engine('handlebars', exphbs());
