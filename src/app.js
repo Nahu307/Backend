@@ -10,6 +10,10 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 const authRoutes = require('./routes/authRoutes');
+const passport = require('passport');
+const bcrypt = require('bcrypt');
+const LocalStrategy = require('passport-local').Strategy;
+const GitHubStrategy = require('passport-github').Strategy;
 
 const port = 8080;
 
@@ -23,6 +27,72 @@ db.on('error', console.error.bind(console, 'Error de conexión a MongoDB:'));
 db.once('open', () => {
   console.log('Conexión exitosa a MongoDB local');
 });
+
+// Configuración de estrategia local de Passport para registro y login
+passport.use('local', new LocalStrategy(
+  (username, password, done) => {
+    // Lógica para verificar el usuario y la contraseña en tu base de datos
+    // Reemplaza 'User' con el modelo de usuario en tu aplicación
+    User.findOne({ username: username }, (err, user) => {
+      if (err) {
+        return done(err);
+      }
+      if (!user) {
+        return done(null, false, { message: 'Usuario incorrecto.' });
+      }
+      bcrypt.compare(password, user.password, (err, res) => {
+        if (res) {
+          return done(null, user);
+        } else {
+          return done(null, false, { message: 'Contraseña incorrecta.' });
+        }
+      });
+    });
+  }
+));
+
+// Configuración de estrategia de GitHub para autenticación
+passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID, 
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/github/callback"
+  },
+  (accessToken, refreshToken, profile, done) => {
+  }
+));
+
+// Serialización y deserialización de usuarios
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+  // Lógica para recuperar el usuario de la base de datos por su ID
+  
+  User.findById(id, (err, user) => {
+    done(err, user);
+  });
+});
+
+// Rutas para login y autenticación de GitHub
+app.post('/login',
+  passport.authenticate('local', {
+    successRedirect: '/dashboard',
+    failureRedirect: '/login',
+    failureFlash: true
+  })
+);
+
+app.get('/auth/github',
+  passport.authenticate('github')
+);
+
+app.get('/auth/github/callback',
+  passport.authenticate('github', { failureRedirect: '/login' }),
+  (req, res) => {
+    res.redirect('/');
+  }
+);
 
 // Agregar las rutas de autenticación
 app.use('/auth', authRoutes);
@@ -101,6 +171,10 @@ app.get('/realtimeproducts', (req, res) => {
 // Iniciar servidor
 server.listen(port, () => {
   console.log(`Servidor Express en ejecución en el puerto ${port}`);
+});
+
+app.listen(3000, () => {
+  console.log('Servidor en el puerto 3000');
 });
 
 
