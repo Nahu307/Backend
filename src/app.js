@@ -5,15 +5,20 @@ const path = require('path');
 const socketIo = require('socket.io');
 const exphbs = require('express-handlebars');
 const mongoose = require('mongoose');
-const cartRouter = require('./routes/cart');
+const cartRouter = require('./dao/routes/cart');
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
-const authRoutes = require('./routes/authRoutes');
+const authRoutes = require('./dao/routes/authRoutes');
 const passport = require('passport');
 const bcrypt = require('bcrypt');
 const LocalStrategy = require('passport-local').Strategy;
 const GitHubStrategy = require('passport-github').Strategy;
+const passportJWT = require('passport-jwt');
+const ExtractJWT = passportJWT.ExtractJwt;
+const JWTStrategy = passportJWT.Strategy;
+const jwt = require('jsonwebtoken');
+const User = require('./models/userModel');
 
 const port = 8080;
 
@@ -26,6 +31,49 @@ const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'Error de conexión a MongoDB:'));
 db.once('open', () => {
   console.log('Conexión exitosa a MongoDB local');
+});
+
+// Configuración de Passport
+passport.use(new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password'
+}, (email, password, done) => {
+  // Lógica para verificar el usuario y contraseña en la base de datos
+  // Usar el modelo User para buscar el usuario por email, verificar contraseña, etc.
+}));
+
+passport.use(new JWTStrategy({
+  jwtFromRequest: ExtractJWT.fromCookie('token'),
+  secretOrKey: 'secret_key' 
+}, (jwtPayload, done) => {
+  // Lógica para verificar el token JWT y devolver el usuario asociado
+  User.findById(jwtPayload.id, (err, user) => {
+    if (err) {
+      return done(err, false);
+    }
+    if (user) {
+      return done(null, user);
+    } else {
+      return done(null, false);
+    }
+  });
+}));
+
+// Ruta para manejar el inicio de sesión y generar tokens JWT
+app.post('/api/login', (req, res, next) => {
+  passport.authenticate('local', { session: false }, (err, user) => {
+    if (err || !user) {
+      return res.status(400).json({ message: 'Authentication failed', user: user });
+    }
+    req.login(user, { session: false }, (err) => {
+      if (err) {
+        res.send(err);
+      }
+
+      const token = jwt.sign({ id: user._id }, 'your_secret_key'); // Generar token JWT
+      return res.json({ user, token });
+    });
+  })(req, res);
 });
 
 // Configuración de estrategia local de Passport para registro y login
@@ -177,4 +225,7 @@ app.listen(3000, () => {
   console.log('Servidor en el puerto 3000');
 });
 
-
+// Ruta para obtener el usuario actual a través del token JWT
+app.get('/api/sessions/current', passport.authenticate('jwt', { session: false }), (req, res) => {
+  res.json({ user: req.user });
+});
